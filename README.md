@@ -39,7 +39,7 @@ e-mail para os membros.
 ```bash
 npm install
 cp .env.example .env
-# edite o .env com sua DATABASE_URL e demais variáveis
+# edite o .env com sua DATABASE_URL/DIRECT_URL e demais variáveis
 
 npx prisma migrate dev   # cria as tabelas
 npm run db:seed          # cria usuários e dados de exemplo
@@ -65,7 +65,8 @@ Veja `.env.example`. Resumo:
 
 | Variável | Descrição |
 | --- | --- |
-| `DATABASE_URL` | String de conexão do PostgreSQL |
+| `DATABASE_URL` | String de conexão do PostgreSQL (via pooler, se aplicável) |
+| `DIRECT_URL` | Conexão direta/sem pooler, usada só para rodar migrations. Necessária ao usar Supabase (veja seção própria abaixo) |
 | `AUTH_SECRET` | Segredo do NextAuth — gere com `openssl rand -base64 32` |
 | `RESEND_API_KEY` | Chave da API do Resend (para enviar e-mails) |
 | `EMAIL_FROM` | Remetente dos e-mails, ex: `Sweet Secrets <avisos@seudominio.com>` |
@@ -80,13 +81,17 @@ verdade) — útil para desenvolver sem custo.
 
 ```bash
 npm run dev         # ambiente de desenvolvimento
-npm run build       # build de produção
+npm run build       # aplica migrations pendentes (prisma migrate deploy) e builda
 npm run start       # roda o build de produção
 npm run lint        # checagem de lint
-npm run db:migrate  # cria/aplica migrations do Prisma
+npm run db:migrate  # cria uma nova migration a partir de mudanças no schema
 npm run db:seed     # popula o banco com dados de exemplo
 npm run db:studio   # abre o Prisma Studio (interface do banco)
 ```
+
+`npm run build` já aplica as migrations pendentes antes de compilar — por
+isso precisa de `DATABASE_URL`/`DIRECT_URL` configuradas mesmo só para
+buildar. É esse mesmo comando que a Vercel roda a cada deploy.
 
 ## Implantação (deploy) recomendada
 
@@ -101,12 +106,50 @@ Sugestão simples e de baixo custo:
    seu domínio e gere uma API key.
 4. Configure as variáveis de ambiente do passo anterior no painel do Vercel
    (Project Settings → Environment Variables).
-5. Rode `npx prisma migrate deploy` (pode ser feito localmente apontando
-   para o banco de produção, ou como parte do processo de deploy).
+5. As migrations rodam automaticamente a cada deploy: o script `build`
+   (`package.json`) já executa `prisma migrate deploy && next build`. Não é
+   necessário rodar nada manualmente após configurar as variáveis de
+   ambiente — basta fazer o deploy (ou um redeploy) que as tabelas são
+   criadas/atualizadas sozinhas.
 6. O resumo semanal já está configurado em `vercel.json` para rodar toda
    **segunda-feira às 11:00 UTC** (ajuste o horário no arquivo conforme o
    fuso desejado). A Vercel envia automaticamente o cabeçalho
    `Authorization: Bearer $CRON_SECRET`, que a rota valida.
+
+### Usando Supabase como banco de dados
+
+O Supabase coloca o Postgres atrás de um connection pooler (Supavisor).
+Para funcionar bem com o Prisma em uma plataforma serverless como a Vercel,
+configure **duas** variáveis de ambiente (em vez de só `DATABASE_URL`):
+
+No painel do projeto Supabase: **Project Settings → Database → Connection
+string**, aba **Connection pooling**. Monte as duas URLs assim:
+
+```
+# Usada em runtime pela aplicação — modo "Transaction" (porta 6543)
+DATABASE_URL="postgresql://postgres.<ref>:<senha>@aws-0-<regiao>.pooler.supabase.com:6543/postgres?pgbouncer=true"
+
+# Usada só para rodar as migrations — modo "Session" (porta 5432, mesmo host do pooler)
+DIRECT_URL="postgresql://postgres.<ref>:<senha>@aws-0-<regiao>.pooler.supabase.com:5432/postgres"
+```
+
+Troque `<ref>`, `<senha>` e `<regiao>` pelos valores do seu projeto. Não use
+a conexão "direct" (`db.<ref>.supabase.co:5432`) em produção na Vercel —
+ela normalmente só é acessível via IPv6 e falha em muitos ambientes; as
+duas URLs do pooler acima (portas 6543 e 5432) resolvem isso.
+
+Depois de configurar as duas variáveis na Vercel e fazer o deploy, rode o
+seed **uma única vez**, a partir de um computador com acesso normal à
+internet (a sua máquina, por exemplo — não precisa ser o servidor de
+produção):
+
+```bash
+git clone https://github.com/LeonardoSSilva309/Sistema-SS
+cd Sistema-SS
+npm install
+echo 'DATABASE_URL="<a mesma URL configurada na Vercel>"' > .env
+npm run db:seed
+```
 
 ### Rodando em um computador/servidor próprio do restaurante
 
