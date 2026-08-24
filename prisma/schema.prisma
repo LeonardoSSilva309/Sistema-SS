@@ -1,0 +1,116 @@
+// Sweet Secrets — schema de dados
+// Documentação: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  ADMIN
+  STAFF
+  MEMBER
+}
+
+enum ReservationStatus {
+  PENDING
+  CONFIRMED
+  CANCELLED
+  COMPLETED
+  NO_SHOW
+}
+
+enum EventType {
+  INTERNAL
+  EXTERNAL
+}
+
+model User {
+  id            String   @id @default(cuid())
+  name          String
+  email         String   @unique
+  passwordHash  String
+  role          Role     @default(MEMBER)
+  phone         String?
+  active        Boolean  @default(true)
+  memberSince   DateTime @default(now())
+  notes         String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  reservations       Reservation[] @relation("MemberReservations")
+  createdReservations Reservation[] @relation("StaffCreatedReservations")
+  createdEvents       Event[]       @relation("EventCreatedBy")
+
+  @@index([role])
+  @@map("users")
+}
+
+model RestaurantTable {
+  id        String   @id @default(cuid())
+  name      String   @unique
+  capacity  Int
+  location  String?
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+
+  reservations Reservation[]
+
+  @@map("restaurant_tables")
+}
+
+model Reservation {
+  id          String            @id @default(cuid())
+  member      User              @relation("MemberReservations", fields: [memberId], references: [id])
+  memberId    String
+  table       RestaurantTable?  @relation(fields: [tableId], references: [id])
+  tableId     String?
+  date        DateTime
+  time        String
+  partySize   Int
+  status      ReservationStatus @default(PENDING)
+  notes       String?
+  createdBy   User?             @relation("StaffCreatedReservations", fields: [createdById], references: [id])
+  createdById String?
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+
+  @@index([date])
+  @@index([memberId])
+  @@index([status])
+  @@map("reservations")
+}
+
+model Event {
+  id          String    @id @default(cuid())
+  title       String
+  description String?
+  type        EventType @default(INTERNAL)
+  startDate   DateTime
+  endDate     DateTime?
+  location    String?
+  isPublic    Boolean   @default(true)
+  createdBy   User?     @relation("EventCreatedBy", fields: [createdById], references: [id])
+  createdById String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@index([startDate])
+  @@index([type])
+  @@map("events")
+}
+
+model DigestLog {
+  id        String   @id @default(cuid())
+  sentAt    DateTime @default(now())
+  weekStart DateTime
+  weekEnd   DateTime
+  recipients Int
+  eventCount Int
+
+  @@map("digest_logs")
+}
