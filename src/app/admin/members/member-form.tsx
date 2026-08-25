@@ -5,6 +5,20 @@ import type { MemberFormState } from "./actions";
 
 const initialState: MemberFormState = {};
 
+const categoryLabels: Record<string, string> = {
+  REGULAR: "Regular",
+  VIP: "VIP",
+  FOUNDER: "Fundador",
+  GUEST: "Convidado",
+};
+
+function toDateInput(value?: Date | null) {
+  if (!value) return "";
+  const d = new Date(value);
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+}
+
 type Props = {
   action: (state: MemberFormState, formData: FormData) => Promise<MemberFormState>;
   defaultValues?: {
@@ -12,6 +26,9 @@ type Props = {
     email?: string;
     phone?: string | null;
     notes?: string | null;
+    category?: string;
+    birthday?: Date | null;
+    monthlyFee?: number | null;
   };
   submitLabel?: string;
 };
@@ -54,17 +71,66 @@ export default function MemberForm({ action, defaultValues, submitLabel }: Props
         )}
       </div>
 
-      <div className="flex flex-col gap-1.5">
-        <label htmlFor="phone" className="text-sm text-muted">
-          Telefone
-        </label>
-        <input
-          id="phone"
-          name="phone"
-          className="input"
-          defaultValue={defaultValues?.phone ?? ""}
-          placeholder="+55 11 90000-0000"
-        />
+      <div className="grid grid-cols-2 gap-4">
+        <div className="flex flex-col gap-1.5">
+          <label htmlFor="phone" className="text-sm text-muted">
+            Telefone
+          </label>
+          <input
+            id="phone"
+            name="phone"
+            className="input"
+            defaultValue={defaultValues?.phone ?? ""}
+            placeholder="+55 11 90000-0000"
+          />
+        </div>
+        <div className="flex flex-col gap-1.5">
+          <label htmlFor="birthday" className="text-sm text-muted">
+            Aniversário
+          </label>
+          <input
+            id="birthday"
+            name="birthday"
+            type="date"
+            className="input"
+            defaultValue={toDateInput(defaultValues?.birthday)}
+          />
+        </div>
+      </div>
+
+      <div className="grid grid-cols-2 gap-4">
+        <div className="flex flex-col gap-1.5">
+          <label htmlFor="category" className="text-sm text-muted">
+            Categoria
+          </label>
+          <select
+            id="category"
+            name="category"
+            className="input"
+            defaultValue={defaultValues?.category ?? "REGULAR"}
+          >
+            {Object.entries(categoryLabels).map(([value, label]) => (
+              <option key={value} value={value}>
+                {label}
+              </option>
+            ))}
+          </select>
+        </div>
+        <div className="flex flex-col gap-1.5">
+          <label htmlFor="monthlyFee" className="text-sm text-muted">
+            Mensalidade (R$)
+          </label>
+          <input
+            id="monthlyFee"
+            name="monthlyFee"
+            type="number"
+            min={0}
+            step={0.01}
+            className="input"
+            placeholder="Opcional"
+            defaultValue={defaultValues?.monthlyFee ?? ""}
+          />
+        </div>
       </div>
 
       <div className="flex flex-col gap-1.5">
