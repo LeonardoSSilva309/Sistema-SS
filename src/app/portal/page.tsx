@@ -3,6 +3,7 @@ import { format, isSameDay } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { prisma } from "@/lib/prisma";
 import { requireUser } from "@/lib/session";
+import { getMemberBalance, formatCurrency } from "@/lib/balance";
 
 function addDays(date: Date, days: number) {
   return new Date(date.getTime() + days * 24 * 60 * 60 * 1000);
@@ -15,7 +16,7 @@ export default async function PortalHomePage() {
   today.setHours(0, 0, 0, 0);
   const weekEnd = addDays(today, 7);
 
-  const [events, nextReservation] = await Promise.all([
+  const [events, nextReservation, balance] = await Promise.all([
     prisma.event.findMany({
       where: { isPublic: true, startDate: { gte: today, lt: weekEnd } },
       orderBy: { startDate: "asc" },
@@ -29,6 +30,7 @@ export default async function PortalHomePage() {
       orderBy: { date: "asc" },
       include: { table: true },
     }),
+    user.role === "MEMBER" ? getMemberBalance(user.id) : Promise.resolve(null),
   ]);
 
   return (
@@ -37,6 +39,17 @@ export default async function PortalHomePage() {
         Olá, {user.name?.split(" ")[0] ?? "membro"}
       </h1>
       <p className="text-muted mb-8">O que vai rolar no Sweet Secrets esta semana.</p>
+
+      {balance !== null && (
+        <div className="card p-4 mb-8 flex items-center justify-between">
+          <p className="text-sm text-muted">Sua consumação</p>
+          <p
+            className={`font-brand text-xl ${balance < 0 ? "text-danger" : "text-gold"}`}
+          >
+            {formatCurrency(balance)}
+          </p>
+        </div>
+      )}
 
       {nextReservation && (
         <div className="card p-4 mb-8 border-gold/40">

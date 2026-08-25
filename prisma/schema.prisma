@@ -30,6 +30,11 @@ enum EventType {
   EXTERNAL
 }
 
+enum TransactionType {
+  CREDIT
+  DEBIT
+}
+
 model User {
   id            String   @id @default(cuid())
   name          String
@@ -46,6 +51,8 @@ model User {
   reservations       Reservation[] @relation("MemberReservations")
   createdReservations Reservation[] @relation("StaffCreatedReservations")
   createdEvents       Event[]       @relation("EventCreatedBy")
+  transactions         ConsumptionTransaction[] @relation("MemberTransactions")
+  createdTransactions  ConsumptionTransaction[] @relation("StaffCreatedTransactions")
 
   @@index([role])
   @@map("users")
@@ -103,6 +110,22 @@ model Event {
   @@index([startDate])
   @@index([type])
   @@map("events")
+}
+
+model ConsumptionTransaction {
+  id          String          @id @default(cuid())
+  member      User            @relation("MemberTransactions", fields: [memberId], references: [id])
+  memberId    String
+  type        TransactionType
+  amount      Decimal         @db.Decimal(10, 2)
+  description String?
+  createdBy   User?           @relation("StaffCreatedTransactions", fields: [createdById], references: [id])
+  createdById String?
+  createdAt   DateTime        @default(now())
+
+  @@index([memberId])
+  @@index([createdAt])
+  @@map("consumption_transactions")
 }
 
 model DigestLog {
