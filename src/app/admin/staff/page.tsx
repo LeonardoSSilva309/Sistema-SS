@@ -2,6 +2,7 @@ import { prisma } from "@/lib/prisma";
 import { requireAdmin } from "@/lib/session";
 import { toggleStaffActiveAction } from "./actions";
 import NewStaffForm from "./new-staff-form";
+import AccessLinkButton from "../access-link-button";
 
 export default async function StaffPage() {
   const admin = await requireAdmin();
@@ -31,27 +32,30 @@ export default async function StaffPage() {
             {staff.map((s) => (
               <div
                 key={s.id}
-                className="flex items-center justify-between text-sm border-b border-border pb-2 last:border-0"
+                className="flex flex-col gap-2 text-sm border-b border-border pb-3 last:border-0"
               >
-                <div>
-                  <p>{s.name}</p>
-                  <p className="text-muted">
-                    {s.email} · {s.role === "ADMIN" ? "Administrador" : "Equipe"}
-                  </p>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p>{s.name}</p>
+                    <p className="text-muted">
+                      {s.email} · {s.role === "ADMIN" ? "Administrador" : "Equipe"}
+                    </p>
+                  </div>
+                  {s.id !== admin.id && (
+                    <form action={toggleStaffActiveAction.bind(null, s.id)}>
+                      <button
+                        className={`badge ${
+                          s.active
+                            ? "bg-success/15 text-success"
+                            : "bg-danger/15 text-danger"
+                        }`}
+                      >
+                        {s.active ? "Ativo" : "Inativo"}
+                      </button>
+                    </form>
+                  )}
                 </div>
-                {s.id !== admin.id && (
-                  <form action={toggleStaffActiveAction.bind(null, s.id)}>
-                    <button
-                      className={`badge ${
-                        s.active
-                          ? "bg-success/15 text-success"
-                          : "bg-danger/15 text-danger"
-                      }`}
-                    >
-                      {s.active ? "Ativo" : "Inativo"}
-                    </button>
-                  </form>
-                )}
+                <AccessLinkButton userId={s.id} />
               </div>
             ))}
           </div>

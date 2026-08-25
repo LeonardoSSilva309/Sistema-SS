@@ -48,6 +48,9 @@ model User {
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
+  passwordResetTokenHash String?   @unique
+  passwordResetExpires   DateTime?
+
   reservations       Reservation[] @relation("MemberReservations")
   createdReservations Reservation[] @relation("StaffCreatedReservations")
   createdEvents       Event[]       @relation("EventCreatedBy")
