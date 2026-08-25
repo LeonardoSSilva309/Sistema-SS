@@ -7,6 +7,7 @@ import { getMemberBalance, formatCurrency } from "@/lib/balance";
 import { updateMemberAction, toggleMemberActiveAction } from "../actions";
 import MemberForm from "../member-form";
 import TransactionForm from "../transaction-form";
+import AccessLinkButton from "../../access-link-button";
 
 const statusLabels: Record<string, string> = {
   PENDING: "Pendente",
@@ -58,6 +59,17 @@ export default async function MemberDetailPage({
             {member.active ? "Desativar membro" : "Reativar membro"}
           </button>
         </form>
+      </div>
+
+      <div className="card p-6 mb-6">
+        <h2 className="text-sm text-muted mb-4 uppercase tracking-wide">
+          Acesso ao sistema
+        </h2>
+        <p className="text-sm text-muted mb-3">
+          Gere um link para o membro definir a própria senha (primeiro acesso ou
+          esqueceu a senha).
+        </p>
+        <AccessLinkButton userId={member.id} />
       </div>
 
       <div className="grid md:grid-cols-2 gap-6">

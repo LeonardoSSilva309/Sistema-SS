@@ -23,8 +23,11 @@ export default async function LoginPage({
         </div>
 
         <p className="text-center text-xs text-muted mt-6">
-          Esqueceu sua senha ou ainda não é membro? Fale com a equipe do Sweet
-          Secrets.
+          <Link href="/forgot-password" className="hover:text-gold">
+            Esqueceu sua senha?
+          </Link>
+          <br />
+          Ainda não é membro? Fale com a equipe do Sweet Secrets.
         </p>
       </div>
     </main>

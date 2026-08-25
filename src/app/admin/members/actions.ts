@@ -53,7 +53,7 @@ export async function createMemberAction(
 
   const passwordHash = await bcrypt.hash(randomPassword(), 10);
 
-  await prisma.user.create({
+  const member = await prisma.user.create({
     data: {
       name: parsed.data.name,
       email: parsed.data.email,
@@ -65,7 +65,7 @@ export async function createMemberAction(
   });
 
   revalidatePath("/admin/members");
-  redirect("/admin/members");
+  redirect(`/admin/members/${member.id}`);
 }
 
 export async function updateMemberAction(
