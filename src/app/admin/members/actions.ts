@@ -12,6 +12,9 @@ const memberSchema = z.object({
   email: z.string().trim().toLowerCase().email("E-mail inválido."),
   phone: z.string().trim().optional(),
   notes: z.string().trim().optional(),
+  category: z.enum(["REGULAR", "VIP", "FOUNDER", "GUEST"]).default("REGULAR"),
+  birthday: z.string().trim().optional(),
+  monthlyFee: z.string().trim().optional(),
 });
 
 export type MemberFormState = {
@@ -34,6 +37,9 @@ export async function createMemberAction(
     email: formData.get("email"),
     phone: formData.get("phone"),
     notes: formData.get("notes"),
+    category: formData.get("category"),
+    birthday: formData.get("birthday"),
+    monthlyFee: formData.get("monthlyFee"),
   });
 
   if (!parsed.success) {
@@ -59,6 +65,9 @@ export async function createMemberAction(
       email: parsed.data.email,
       phone: parsed.data.phone || null,
       notes: parsed.data.notes || null,
+      category: parsed.data.category,
+      birthday: parsed.data.birthday ? new Date(`${parsed.data.birthday}T00:00:00`) : null,
+      monthlyFee: parsed.data.monthlyFee ? Number(parsed.data.monthlyFee) : null,
       passwordHash,
       role: "MEMBER",
     },
@@ -80,6 +89,9 @@ export async function updateMemberAction(
     email: formData.get("email"),
     phone: formData.get("phone"),
     notes: formData.get("notes"),
+    category: formData.get("category"),
+    birthday: formData.get("birthday"),
+    monthlyFee: formData.get("monthlyFee"),
   });
 
   if (!parsed.success) {
@@ -104,12 +116,15 @@ export async function updateMemberAction(
       email: parsed.data.email,
       phone: parsed.data.phone || null,
       notes: parsed.data.notes || null,
+      category: parsed.data.category,
+      birthday: parsed.data.birthday ? new Date(`${parsed.data.birthday}T00:00:00`) : null,
+      monthlyFee: parsed.data.monthlyFee ? Number(parsed.data.monthlyFee) : null,
     },
   });
 
   revalidatePath("/admin/members");
   revalidatePath(`/admin/members/${memberId}`);
-  redirect("/admin/members");
+  redirect(`/admin/members/${memberId}`);
 }
 
 export async function toggleMemberActiveAction(memberId: string) {

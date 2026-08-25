@@ -4,10 +4,13 @@ import { ptBR } from "date-fns/locale";
 import { prisma } from "@/lib/prisma";
 import { requireStaff } from "@/lib/session";
 import { getMemberBalance, formatCurrency } from "@/lib/balance";
+import { getMemberVisitCount } from "@/lib/member-stats";
 import { updateMemberAction, toggleMemberActiveAction } from "../actions";
 import MemberForm from "../member-form";
 import TransactionForm from "../transaction-form";
 import AccessLinkButton from "../../access-link-button";
+import PhotoUpload from "../photo-upload";
+import NotesLog from "../notes-log";
 
 const statusLabels: Record<string, string> = {
   PENDING: "Pendente",
@@ -15,6 +18,20 @@ const statusLabels: Record<string, string> = {
   CANCELLED: "Cancelada",
   COMPLETED: "Concluída",
   NO_SHOW: "Não compareceu",
+};
+
+const categoryLabels: Record<string, string> = {
+  REGULAR: "Regular",
+  VIP: "VIP",
+  FOUNDER: "Fundador",
+  GUEST: "Convidado",
+};
+
+const categoryColors: Record<string, string> = {
+  REGULAR: "bg-surface-2 text-muted",
+  VIP: "bg-gold/15 text-gold",
+  FOUNDER: "bg-gold/15 text-gold",
+  GUEST: "bg-surface-2 text-muted",
 };
 
 export default async function MemberDetailPage({
@@ -37,12 +54,20 @@ export default async function MemberDetailPage({
         orderBy: { createdAt: "desc" },
         take: 15,
       },
+      memberNotes: {
+        orderBy: { createdAt: "desc" },
+        take: 20,
+        include: { createdBy: { select: { name: true } } },
+      },
     },
   });
 
   if (!member) notFound();
 
-  const balance = await getMemberBalance(member.id);
+  const [balance, visitCount] = await Promise.all([
+    getMemberBalance(member.id),
+    getMemberVisitCount(member.id),
+  ]);
 
   const updateAction = updateMemberAction.bind(null, member.id);
   const toggleAction = toggleMemberActiveAction.bind(null, member.id);
@@ -50,7 +75,22 @@ export default async function MemberDetailPage({
   return (
     <div>
       <div className="flex items-center justify-between mb-6">
-        <h1 className="font-brand text-2xl">{member.name}</h1>
+        <div className="flex items-center gap-4">
+          <PhotoUpload memberId={member.id} name={member.name} photoUrl={member.photoUrl} />
+          <div>
+            <div className="flex items-center gap-2">
+              <h1 className="font-brand text-2xl">{member.name}</h1>
+              <span className={`badge ${categoryColors[member.category]}`}>
+                {categoryLabels[member.category]}
+              </span>
+            </div>
+            <p className="text-sm text-muted mt-1">
+              Membro desde {format(member.memberSince, "MMMM 'de' yyyy", { locale: ptBR })}
+              {member.birthday &&
+                ` · Aniversário em ${format(member.birthday, "dd/MM", { locale: ptBR })}`}
+            </p>
+          </div>
+        </div>
         <form action={toggleAction}>
           <button
             type="submit"
@@ -79,7 +119,10 @@ export default async function MemberDetailPage({
           </h2>
           <MemberForm
             action={updateAction}
-            defaultValues={member}
+            defaultValues={{
+              ...member,
+              monthlyFee: member.monthlyFee ? member.monthlyFee.toNumber() : null,
+            }}
             submitLabel="Salvar alterações"
           />
         </div>
@@ -87,6 +130,9 @@ export default async function MemberDetailPage({
         <div className="card p-6">
           <h2 className="text-sm text-muted mb-4 uppercase tracking-wide">
             Últimas reservas
+            <span className="text-foreground normal-case ml-1">
+              ({visitCount} {visitCount === 1 ? "visita concluída" : "visitas concluídas"})
+            </span>
           </h2>
           <div className="flex flex-col gap-3">
             {member.reservations.length === 0 && (
@@ -156,6 +202,13 @@ export default async function MemberDetailPage({
             ))}
           </div>
         </div>
+      </div>
+
+      <div className="card p-6 mt-6">
+        <h2 className="text-sm text-muted mb-4 uppercase tracking-wide">
+          Histórico de observações
+        </h2>
+        <NotesLog memberId={member.id} notes={member.memberNotes} />
       </div>
     </div>
   );
