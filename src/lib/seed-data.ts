@@ -1,4 +1,4 @@
-import { PrismaClient, Role, EventType, ReservationStatus } from "@prisma/client";
+import { PrismaClient, Role, EventType, ReservationStatus, TransactionType } from "@prisma/client";
 import bcrypt from "bcryptjs";
 
 function addDays(date: Date, days: number) {
@@ -109,6 +109,30 @@ export async function seedDatabase(prisma: PrismaClient) {
         status: ReservationStatus.CONFIRMED,
         createdById: admin.id,
       },
+    });
+  }
+
+  const existingTransaction = await prisma.consumptionTransaction.findFirst({
+    where: { memberId: member.id },
+  });
+  if (!existingTransaction) {
+    await prisma.consumptionTransaction.createMany({
+      data: [
+        {
+          memberId: member.id,
+          type: TransactionType.CREDIT,
+          amount: 300,
+          description: "Recarga inicial",
+          createdById: admin.id,
+        },
+        {
+          memberId: member.id,
+          type: TransactionType.DEBIT,
+          amount: 85.5,
+          description: "Bebidas e petiscos",
+          createdById: admin.id,
+        },
+      ],
     });
   }
 

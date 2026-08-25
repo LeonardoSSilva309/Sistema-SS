@@ -3,8 +3,10 @@ import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { prisma } from "@/lib/prisma";
 import { requireStaff } from "@/lib/session";
+import { getMemberBalance, formatCurrency } from "@/lib/balance";
 import { updateMemberAction, toggleMemberActiveAction } from "../actions";
 import MemberForm from "../member-form";
+import TransactionForm from "../transaction-form";
 
 const statusLabels: Record<string, string> = {
   PENDING: "Pendente",
@@ -30,10 +32,16 @@ export default async function MemberDetailPage({
         take: 10,
         include: { table: true },
       },
+      transactions: {
+        orderBy: { createdAt: "desc" },
+        take: 15,
+      },
     },
   });
 
   if (!member) notFound();
+
+  const balance = await getMemberBalance(member.id);
 
   const updateAction = updateMemberAction.bind(null, member.id);
   const toggleAction = toggleMemberActiveAction.bind(null, member.id);
@@ -87,6 +95,51 @@ export default async function MemberDetailPage({
                   </p>
                 </div>
                 <span className="badge bg-surface-2">{statusLabels[r.status]}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      <div className="grid md:grid-cols-2 gap-6 mt-6">
+        <div className="card p-6">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-sm text-muted uppercase tracking-wide">Consumação</h2>
+            <span
+              className={`font-brand text-xl ${balance < 0 ? "text-danger" : "text-gold"}`}
+            >
+              {formatCurrency(balance)}
+            </span>
+          </div>
+          <TransactionForm memberId={member.id} />
+        </div>
+
+        <div className="card p-6">
+          <h2 className="text-sm text-muted mb-4 uppercase tracking-wide">
+            Últimos lançamentos
+          </h2>
+          <div className="flex flex-col gap-3">
+            {member.transactions.length === 0 && (
+              <p className="text-sm text-muted">Nenhum lançamento registrado.</p>
+            )}
+            {member.transactions.map((t) => (
+              <div
+                key={t.id}
+                className="flex items-center justify-between text-sm border-b border-border pb-2 last:border-0"
+              >
+                <div>
+                  <p>
+                    {t.type === "CREDIT" ? "Recarga" : "Consumo"}
+                    {t.description ? ` — ${t.description}` : ""}
+                  </p>
+                  <p className="text-muted">
+                    {format(t.createdAt, "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
+                  </p>
+                </div>
+                <span className={t.type === "CREDIT" ? "text-success" : "text-danger"}>
+                  {t.type === "CREDIT" ? "+" : "-"}
+                  {formatCurrency(t.amount.toNumber())}
+                </span>
               </div>
             ))}
           </div>
